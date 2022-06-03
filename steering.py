@@ -1,8 +1,15 @@
 import numpy as np
 import cv2
 import imutils
+import time
 from imutils.video import VideoStream
 from directkeys import PressKey, A, D, Space, ReleaseKey
+
+prev_frame_time = 0
+new_frame_time = 0
+list_fps = []
+prev_time = time.time()
+c = 0
 
 cam = VideoStream(src=0).start()
 currentKey = list()
@@ -40,7 +47,6 @@ while True:
     cnts_down = imutils.grab_contours(cnts_down)
 
     if len(cnts_up) > 0:
-        
         c = max(cnts_up, key=cv2.contourArea)
         M = cv2.moments(c)
         cX = int(M["m10"]/(M["m00"]+0.000001))
@@ -60,6 +66,20 @@ while True:
         key = True
         currentKey.append(Space)
     
+    # tampilkan FPS
+    new_frame_time = time.time()
+    fps = 1/(new_frame_time-prev_frame_time)
+    prev_frame_time = new_frame_time
+    list_fps.append(int(fps))
+                                                                                                                              
+    if c < 10 or time.time()-prev_time >= 1:
+        prev_time = time.time()
+        avg = int(sum(list_fps)/len(list_fps))
+        fps_str = 'FPS : ' + str(avg)
+        list_fps = []
+
+    cv2.putText(img, fps_str, (10, 460), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2, cv2.LINE_AA)
+
     img = cv2.rectangle(img,(0,0),(width//2- 35,height//2 ),(0,255,0),1)
     cv2.putText(img,'LEFT',(110,30),cv2.FONT_HERSHEY_DUPLEX,1,(139,0,0))
 
@@ -80,5 +100,5 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         break
- 
+    c+=1
 cv2.destroyAllWindows()
