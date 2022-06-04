@@ -5,17 +5,13 @@ import time
 from imutils.video import VideoStream
 from directkeys import PressKey, A, D, Space, ReleaseKey
 
-prev_frame_time = 0
-new_frame_time = 0
-list_fps = []
+fps=0
 prev_time = time.time()
-c = 0
-
+h_nit = 40
 cam = VideoStream(src=0).start()
 currentKey = list()
 
 while True:
-
     key = False
 
     img = cam.read()
@@ -26,7 +22,7 @@ while True:
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     value = (11, 11)
     blurred = cv2.GaussianBlur(hsv, value,0)
-    colourLower = np.array([53, 55, 209])
+    colourLower = np.array([0, 80, 170])
     colourUpper = np.array([180,255,255])
 
     height = img.shape[0]
@@ -37,7 +33,7 @@ while True:
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5,5),np.uint8))
 
     upContour = mask[0:height//2,0:width]
-    downContour = mask[3*height//4:height,2*width//5:3*width//5]
+    downContour = mask[3*height//4+h_nit:height,2*width//5:3*width//5]
 
     cnts_up = cv2.findContours(upContour, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
     cnts_up = imutils.grab_contours(cnts_up)
@@ -46,6 +42,7 @@ while True:
     cnts_down = cv2.findContours(downContour, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
     cnts_down = imutils.grab_contours(cnts_down)
 
+    left, right, space = False, False, False
     if len(cnts_up) > 0:
         c = max(cnts_up, key=cv2.contourArea)
         M = cv2.moments(c)
@@ -55,40 +52,51 @@ while True:
             PressKey(A)
             key = True
             currentKey.append(A)
+            left = True
         elif cX > (width//2 + 35):
             PressKey(D)
             key = True
             currentKey.append(D)
-            
-    
+            right = True
+
     if len(cnts_down) > 0:
         PressKey(Space)
         key = True
         currentKey.append(Space)
+        space = True
     
     # tampilkan FPS
-    new_frame_time = time.time()
-    fps = 1/(new_frame_time-prev_frame_time)
-    prev_frame_time = new_frame_time
-    list_fps.append(int(fps))
-                                                                                                                              
-    if c < 10 or time.time()-prev_time >= 1:
+    if time.time()-prev_time >= 1:
         prev_time = time.time()
-        avg = int(sum(list_fps)/len(list_fps))
-        fps_str = 'FPS : ' + str(avg)
-        list_fps = []
+        fps_str = 'FPS : ' + str(fps)
+        fps = 0
+    fps += 1                                                                                     
 
     cv2.putText(img, fps_str, (10, 460), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 2, cv2.LINE_AA)
-
+ 
     img = cv2.rectangle(img,(0,0),(width//2- 35,height//2 ),(0,255,0),1)
     cv2.putText(img,'LEFT',(110,30),cv2.FONT_HERSHEY_DUPLEX,1,(139,0,0))
+    if left:
+        overlay1 = img.copy()
+        cv2.rectangle(overlay1, (0, 0), (width//2- 35,height//2 ), (0, 200, 0), -1)  # A filled rectangle
+        alpha = 0.4  # Transparency factor.
+        img = cv2.addWeighted(overlay1, alpha, img, 1 - alpha, 1)
 
     img = cv2.rectangle(img,(width//2 + 35,0),(width-2,height//2 ),(0,255,0),1)
     cv2.putText(img,'RIGHT',(440,30),cv2.FONT_HERSHEY_DUPLEX,1,(139,0,0))
+    if right:
+        overlay2 = img.copy()
+        cv2.rectangle(overlay2, (width//2 + 35,0),(width-2,height//2 ), (0, 200, 0), -1)  # A filled rectangle
+        alpha = 0.4  # Transparency factor.
+        img = cv2.addWeighted(overlay2, alpha, img, 1 - alpha, 1)
 
-    img = cv2.rectangle(img,(2*(width//5),3*(height//4)),(3*width//5,height),(0,255,0),1)
-    cv2.putText(img,'NITRO',(2*(width//5) + 20,height-10),cv2.FONT_HERSHEY_DUPLEX,1,(139,0,0))
-
+    img = cv2.rectangle(img,(2*(width//5),3*(height//4)+h_nit),(3*width//5,height),(0,255,0),1)
+    cv2.putText(img,'NITRO',(2*(width//5) + 20,height-10),cv2.FONT_HERSHEY_DUPLEX,1,(255,255,0))
+    if space:
+        overlay3 = img.copy()
+        cv2.rectangle(overlay3, (2*(width//5),3*(height//4)+h_nit),(3*width//5,height), (0, 200, 0), -1)  # A filled rectangle
+        alpha = 0.4  # Transparency factor.
+        img = cv2.addWeighted(overlay3, alpha, img, 1 - alpha, 1)
 
     cv2.imshow("Steering", img)
 
@@ -100,5 +108,5 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         break
-    c+=1
+    time.sleep(.001)
 cv2.destroyAllWindows()
