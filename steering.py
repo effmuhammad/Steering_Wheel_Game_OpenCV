@@ -108,5 +108,4 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         break
-    time.sleep(.001)
 cv2.destroyAllWindows()
